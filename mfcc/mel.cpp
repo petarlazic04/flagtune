@@ -138,38 +138,37 @@ std::vector<float> mel_energies(
 
 int main() {
     const int sample_rate = 16000;
-    const int n_fft = 64;
+    const int n_fft = 512;
     const int n_bins = n_fft / 2 + 1;
     const int n_mels = 12;
 
     const float fmin = 0.0f;
     const float fmax = sample_rate / 2.0f;
 
-    // Create a sample power spectrum
     std::vector<float> power(n_bins, 0.0f);
 
-    // Set some arbitrary non-zero power values for testing
-    power[2]  = 0.25f;
-    power[5]  = 1.00f;
-    power[9]  = 0.64f;
-    power[13] = 0.09f;
-    power[20] = 0.36f;
-    power[28] = 0.81f;
+    power[16]  = 0.25f;   // 500 Hz
+    power[40]  = 1.00f;   // 1250 Hz
+    power[72]  = 0.64f;   // 2250 Hz
+    power[104] = 0.09f;   // 3250 Hz
+    power[160] = 0.36f;   // 5000 Hz
+    power[224] = 0.81f;   // 7000 Hz
 
     std::cout << "sample_rate=" << sample_rate
-                << " n_fft=" << n_fft
-                << " n_bins=" << n_bins
-                << " n_mels=" << n_mels
-                << " fmin=" << fmin
-                << " fmax=" << fmax << "\n\n";
+              << " n_fft=" << n_fft
+              << " n_bins=" << n_bins
+              << " n_mels=" << n_mels
+              << " fmin=" << fmin
+              << " fmax=" << fmax << "\n\n";
 
     std::cout << "Power spectrum bins (k, freq_hz, power):\n";
     for (int k = 0; k < n_bins; ++k) {
-        const double freq = (static_cast<double>(k) * sample_rate) / n_fft;
-        if (power[k] != 0.0f) {
-            std::cout << "  k=" << std::setw(2) << k
-                        << "  f=" << std::setw(7) << std::fixed << std::setprecision(1) << freq << " Hz"
-                        << "  P=" << std::setprecision(6) << power[k] << "\n";
+        if (power[k] > 0.0f) {
+            double freq = (double)k * sample_rate / n_fft;
+            std::cout << "  k=" << std::setw(3) << k
+                      << "  f=" << std::setw(7) << std::fixed << std::setprecision(1)
+                      << freq << " Hz"
+                      << "  P=" << power[k] << "\n";
         }
     }
 
@@ -178,18 +177,14 @@ int main() {
     );
 
     std::cout << "\nFilterbank preview (first 4 mel filters; non-zero weights only):\n";
-    const int preview_m = std::min(n_mels, 4);
-    for (int m = 0; m < preview_m; ++m) {
+    for (int m = 0; m < 4; ++m) {
         std::cout << "mel_filter[" << m << "]: ";
-        bool any = false;
         for (int k = 0; k < n_bins; ++k) {
-            const float w = fb[m][k];
-            if (w > 0.0f) {
-                any = true;
-                std::cout << "(k=" << k << ", w=" << std::setprecision(3) << w << ") ";
+            if (fb[m][k] > 0.0f) {
+                std::cout << "(k=" << k
+                          << ", w=" << std::setprecision(3) << fb[m][k] << ") ";
             }
         }
-        if (!any) std::cout << "(all zero)";
         std::cout << "\n";
     }
 
@@ -198,9 +193,8 @@ int main() {
     std::cout << "\nMel energies:\n";
     for (int m = 0; m < n_mels; ++m) {
         std::cout << "  mel[" << std::setw(2) << m << "] = "
-                    << std::fixed << std::setprecision(8) << mel[m] << "\n";
+                  << std::fixed << std::setprecision(6) << mel[m] << "\n";
     }
 
     return 0;
-    
 }
