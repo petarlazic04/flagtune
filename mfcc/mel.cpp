@@ -136,6 +136,8 @@ std::vector<float> mel_energies(
     return mel_energies_from_power_spectrum(power_spectrum, fb);
 }
 
+/*
+
 int main() {
     const int sample_rate = 16000;
     const int n_fft = 512;
@@ -198,3 +200,4 @@ int main() {
 
     return 0;
 }
+*/
