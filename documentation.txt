@@ -4,7 +4,7 @@ https://docs.google.com/document/d/1xk4UtF1GljxYSZRsTryzVXfqct888PlqlM0rFdzC7zs/
 Windowing
 =======================
 
-Ovjde smo implementirali Hann prozorsku funkciju
+Ovdje smo implementirali Hann prozorsku funkciju
 
 1) Otkud potreba za prozorskom funkcijom?
 
@@ -72,7 +72,7 @@ Koristimo standardnu (HTK) Mel skalu:
 - f = 700 * (10^(mel/2595) - 1)
 
 4) Kako se grade filteri (trougaoni filterbank)
-Za n_mels filtera, prvo napravimo n_mels + 2 Mel tačke ravnomerno raspoređene na Mel skali između fmin i fmax.
+Za n_mels filtera, prvo napravimo n_mels + 2 Mel tačke ravnomjerno raspoređene na Mel skali između fmin i fmax.
 Te tačke zatim:
 - pretvaramo iz Mel u Hz,
 - mapiramo na FFT binove (diskretna mreža):
