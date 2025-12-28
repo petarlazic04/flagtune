@@ -37,10 +37,46 @@ funkcija samo formula i nije nam potreban overhead koji bi standardni poziv
 funkcije imao.
 - apply_hann_window radi na nivou frejma za sve odbirke
 
+============================
+FFT (Fast Fourier Transform)
+============================
 
-========================
+1) Zašto koristimo Furijeovu transformaciju?
+
+- MFCC koeficijenti žele da uhvate perceptivno značajne frekvencije nekog zvuka.
+- Da bi se ovo ostvarilo sam signal moramo predstavit u frekvencijskom domenu.
+- Furijeova transformacija razlaže signal na sinusne i kosinusne komponente, kako bi predstavili
+magnitudu (energiju) i fazu svake frekvencije.
+
+2) Koji su nacini implementacije Furijeove transformacije?
+
+- Koriscenje formule kojom je definisana DFT zahtijeva prolazak kroz N odbiraka frejma
+za svaki od N odbiraka frejma kako bi izracunali vrijednost što znači da je time complexity O(N^2)
+- Kao alternativa ovom pristupu osmisljen je rekurzivni algoritam (Cooley-Tukey) koji dijeli frejm
+na parne i neparne odbirke dok velicina frejma ne dosegne 1
+- Ovaj algoritam dijeli problem na 2 dijela sto daje log(N) segmenata pružajuci ukupno O(N log N)
+time complexity sto ce zbog dalje upotrebe u realnom vremenu značajno ubrzati rad
+
+3) Kako radi Cooley - Tukey?
+
+- Prije svega neophodno je prozorirane odbirke pretvoriti u kompleksne brojeve, jer je Furijeova
+transformacija kompleksna transformacija. U te svrhe koristimo funkciju to_complex()
+- Dijelimo frejm na parne i neparne indekse i mnozimo sa e^(-2*PI*k)/n koji se naziva twiddle faktor
+i mnozimo sa odd kako bi mu okrenuli fazu nakon cega spajamo oba dijela.
+- Funkcija vraca rijesenje u obliku kompleksnih brojeva za šta smo koristili std::complex
+
+4) Šta je power spectrum?
+
+- Za dalji rad sa Mel frekvencijskom transformacijom neophodno je da imamo predstavu energije po frekvencijama
+- Magnituda svakog frekvencijskog bina pokazuje nam koliko energije ima ta frekvencija
+- U funkciji power_spectrum koristimo kvadrat magnitude kako bi izrazili energiju i nakon toga dijelimo sa ukupnim
+brojem odbiraka kako bi dobili normalizovane vrijednosti.
+- Ovo se vrsi kako bi uskladili vrijednosti za poredjenje nezavisno od dužine frejma nad kojim se ovo vrši.
+
+
+=====================================================
 Mel filterbank (Mel frekvencijska transformacija)
-========================
+=====================================================
 
 U ovom dijelu projekta implementirali smo Mel filterbank koji se primjenjuje na FFT spektar.
 
