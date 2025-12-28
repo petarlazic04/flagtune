@@ -9,6 +9,7 @@
 #include "mel.hpp"
 #include "dct.hpp"
 
+
 namespace fs = std::filesystem;
 
 // ===============================
@@ -68,9 +69,10 @@ int main(int argc, char** argv)
 
 
         //apply_hann_window(x);
-        // x = fft_mag(x);
-        // x = power_spectrum(x);
-        // x = mel_filterbank(x);
+        //std::vector<cf> odbirci = to_complex(x);
+        //fft(odbirci);
+        //x = power_spectrum(odbirci);
+        // x = mel_energies(x);
         // x = log_energy(x);
         // x = dct_mfcc(x);
 

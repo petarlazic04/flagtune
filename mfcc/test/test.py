@@ -48,8 +48,8 @@ def dct_mfcc(x, n_mfcc):
 # PIPELINE (ENABLE ONE)
 # ===============================
 
-y = windowing(x)
-# y = power_spectrum(windowing(x))
+#y = windowing(x)
+#y = power_spectrum(windowing(x))
 # y = mel_filterbank(power_spectrum(windowing(x)), FS, N_MELS)
 # y = log_energy(mel_filterbank(power_spectrum(windowing(x)), FS, N_MELS))
 # y = dct_mfcc(log_energy(mel_filterbank(power_spectrum(windowing(x)), FS, N_MELS)), N_MFCC)
