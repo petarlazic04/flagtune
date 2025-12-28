@@ -27,3 +27,16 @@ std::vector<float> mel_energies(
     float fmin_hz,
     float fmax_hz
 );
+
+// Convenience: time-domain frame -> FFT -> normalized power spectrum (rFFT bins) -> Mel energies.
+// Expects frame.size() == n_fft.
+// NOTE: For real-time, prefer building the filterbank once and calling
+// mel_energies_from_power_spectrum(...) per frame.
+std::vector<float> mel_energies_from_frame(
+    const std::vector<float>& frame,
+    int sample_rate,
+    int n_fft,
+    int n_mels,
+    float fmin_hz,
+    float fmax_hz
+);

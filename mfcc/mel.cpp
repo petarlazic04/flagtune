@@ -1,4 +1,5 @@
 #include "mel.hpp"
+#include "fft.hpp"
 #include <algorithm>
 #include <cmath>
 #include <stdexcept>
@@ -136,68 +137,49 @@ std::vector<float> mel_energies(
     return mel_energies_from_power_spectrum(power_spectrum, fb);
 }
 
+std::vector<float> mel_energies_from_frame(
+    const std::vector<float>& frame,
+    int sample_rate,
+    int n_fft,
+    int n_mels,
+    float fmin_hz,
+    float fmax_hz
+) {
+    if (static_cast<int>(frame.size()) != n_fft) {
+        throw std::invalid_argument("mel_energies_from_frame: frame size must equal n_fft");
+    }
+
+    std::vector<cf> X = to_complex(frame);
+    fft(X);
+    std::vector<float> P = power_spectrum_rfft(X); // size = n_fft/2 + 1
+    return mel_energies(P, sample_rate, n_fft, n_mels, fmin_hz, fmax_hz);
+}
+
 /*
 
 int main() {
     const int sample_rate = 16000;
     const int n_fft = 512;
-    const int n_bins = n_fft / 2 + 1;
-    const int n_mels = 12;
-
+    const int n_mels = 26;
     const float fmin = 0.0f;
     const float fmax = sample_rate / 2.0f;
 
-    std::vector<float> power(n_bins, 0.0f);
-
-    power[16]  = 0.25f;   // 500 Hz
-    power[40]  = 1.00f;   // 1250 Hz
-    power[72]  = 0.64f;   // 2250 Hz
-    power[104] = 0.09f;   // 3250 Hz
-    power[160] = 0.36f;   // 5000 Hz
-    power[224] = 0.81f;   // 7000 Hz
-
-    std::cout << "sample_rate=" << sample_rate
-              << " n_fft=" << n_fft
-              << " n_bins=" << n_bins
-              << " n_mels=" << n_mels
-              << " fmin=" << fmin
-              << " fmax=" << fmax << "\n\n";
-
-    std::cout << "Power spectrum bins (k, freq_hz, power):\n";
-    for (int k = 0; k < n_bins; ++k) {
-        if (power[k] > 0.0f) {
-            double freq = (double)k * sample_rate / n_fft;
-            std::cout << "  k=" << std::setw(3) << k
-                      << "  f=" << std::setw(7) << std::fixed << std::setprecision(1)
-                      << freq << " Hz"
-                      << "  P=" << power[k] << "\n";
-        }
+    // Simple test frame: 1 kHz sine.
+    const double freq = 1000.0;
+    std::vector<float> frame(n_fft);
+    for (int n = 0; n < n_fft; ++n) {
+        frame[n] = static_cast<float>(std::sin(2.0 * M_PI * freq * n / sample_rate));
     }
 
-    auto fb = build_mel_filterbank(
-        sample_rate, n_fft, n_mels, fmin, fmax, true
-    );
+    auto mel = mel_energies_from_frame(frame, sample_rate, n_fft, n_mels, fmin, fmax);
 
-    std::cout << "\nFilterbank preview (first 4 mel filters; non-zero weights only):\n";
-    for (int m = 0; m < 4; ++m) {
-        std::cout << "mel_filter[" << m << "]: ";
-        for (int k = 0; k < n_bins; ++k) {
-            if (fb[m][k] > 0.0f) {
-                std::cout << "(k=" << k
-                          << ", w=" << std::setprecision(3) << fb[m][k] << ") ";
-            }
-        }
-        std::cout << "\n";
-    }
-
-    auto mel = mel_energies_from_power_spectrum(power, fb);
-
-    std::cout << "\nMel energies:\n";
+    std::cout << "Mel energies from frame (1kHz sine):\n";
     for (int m = 0; m < n_mels; ++m) {
         std::cout << "  mel[" << std::setw(2) << m << "] = "
-                  << std::fixed << std::setprecision(6) << mel[m] << "\n";
+                  << std::fixed << std::setprecision(8) << mel[static_cast<std::size_t>(m)]
+                  << "\n";
     }
-
     return 0;
 }
+
 */

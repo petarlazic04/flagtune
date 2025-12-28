@@ -1,1 +1,10 @@
 .vscode
+*.o
+*.a
+*.so
+*.out
+*.exe
+build/
+.venv/
+venv/
+data/

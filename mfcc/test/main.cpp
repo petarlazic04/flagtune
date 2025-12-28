@@ -5,7 +5,7 @@
 #include <cmath>
 
 #include "hanning.hpp"
-#include "dft.hpp"
+#include "fft.hpp"
 #include "mel.hpp"
 #include "dct.hpp"
 

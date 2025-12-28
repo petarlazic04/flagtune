@@ -1,4 +1,4 @@
-#include <dft.hpp>
+#include <fft.hpp>
 
 
 std::vector<cf> to_complex(const std::vector<float> &real_vector) {
@@ -38,6 +38,17 @@ std::vector<float> power_spectrum(const std::vector<cf> &X) {
     std::vector<float> P(N);
     for (int k = 0; k < N; k++)
         P[k] = norm(X[k]) / N;  // |X[k]|^2 normalizirano
+    return P;
+}
+
+std::vector<float> power_spectrum_rfft(const std::vector<cf> &X) {
+    const int N = static_cast<int>(X.size());
+    if (N <= 0) return {};
+
+    const int n_bins = N / 2 + 1;
+    std::vector<float> P(static_cast<std::size_t>(n_bins));
+    for (int k = 0; k < n_bins; ++k)
+        P[static_cast<std::size_t>(k)] = norm(X[static_cast<std::size_t>(k)]) / N;
     return P;
 }
 
