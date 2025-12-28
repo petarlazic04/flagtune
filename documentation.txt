@@ -1,1 +1,73 @@
 https://docs.google.com/document/d/1xk4UtF1GljxYSZRsTryzVXfqct888PlqlM0rFdzC7zs/edit?tab=t.0
+
+========================
+Mel filterbank (Mel frekvencijska transformacija)
+========================
+
+U ovom dijelu projekta implementirali smo Mel filterbank koji se primjenjuje na FFT spektar.
+
+1) Šta je ulaz i šta je “spectrum bin”?
+- Nakon FFT dužine N (= n_fft), dobijamo diskretan spektar po frekvencijskim "binovima".
+- Bin je indeks k u FFT rezultatu. Za realan signal najčešće koristimo samo pozitivne frekvencije: 
+broj binova = n_fft/2 + 1.
+- Frekvencija centra bina: 
+f_k = k * sample_rate / n_fft
+- Razmak između binova (frekvencijska rezolucija): 
+Δf = sample_rate / n_fft
+
+U implementaciji ne računamo FFT, već pretpostavljamo da već imamo spektar u obliku:
+- power_spectrum[k] = |X[k]|^2  (POWER spektar)
+Napomena: to nije magnituda |X[k]|, nego kvadrat magnitude (energija po binu).
+
+2) Šta radi Mel filterbank (realna interpretacija)?
+Cilj Mel filterbank-a je da “sabije” linearni FFT spektar u manji broj kanala koji bolje odgovaraju ljudskoj percepciji frekvencije:
+- Na niskim frekvencijama imamo finiju rezoluciju (više “kanala” po Hz),
+- Na višim frekvencijama rezolucija je grublja.
+
+Rezultat je vektor Mel energija:
+mel[m], m = 0..n_mels-1
+Svaki mel[m] predstavlja energiju signala u jednom perceptualnom frekvencijskom opsegu (Mel band).
+
+3) Mel skala (mapiranje Hz <-> Mel)
+Koristimo standardnu (HTK) Mel skalu:
+- mel = 2595 * log10(1 + f/700)
+- f = 700 * (10^(mel/2595) - 1)
+
+4) Kako se grade filteri (trougaoni filterbank)
+Za n_mels filtera, prvo napravimo n_mels + 2 Mel tačke ravnomerno raspoređene na Mel skali između fmin i fmax.
+Te tačke zatim:
+- pretvaramo iz Mel u Hz,
+- mapiramo na FFT binove (diskretna mreža):
+  bin = floor((n_fft + 1) * hz / sample_rate)
+Svaki Mel filter je trougao definisan sa 3 indeksa:
+- left  = bin_points[m]
+- center= bin_points[m+1]
+- right = bin_points[m+2]
+Težine rastu od left do center (0 -> 1) i padaju od center do right (1 -> 0).
+
+Opcionalno radimo normalizaciju:
+- normalize_by_sum = true
+- svaki filter se normalizuje tako da zbir njegovih težina bude 1
+Ovo stabilizuje skalu izlaznih Mel energija (da ne zavisi previše od broja binova koje filter pokriva).
+
+5) Kako se filterbank primjenjuje na spektar (dobijanje Mel energija)
+Mel energija se računa kao ponderisana suma (suma sa težinama) power spektra:
+mel[m] = Σ_k filterbank[m][k] * power_spectrum[k]
+
+To znači:
+- ako u nekom FFT binu imamo pik energije, on će doprinijeti jednom ili dva susjedna Mel kanala (u zavisnosti od toga gdje bin pada u trouglu).
+
+6) Implementacija (C++)
+Implementirane su sljedeće funkcije:
+- build_mel_filterbank(...)
+  Pravi matricu težina dimenzija [n_mels][n_fft/2 + 1].
+- mel_energies_from_power_spectrum(power_spectrum, filterbank)
+  Primjenjuje filterbank na POWER spektar i vraća Mel energije.
+- mel_energies(...)
+  Convenience funkcija: build + apply u jednom pozivu.
+
+U mel.cpp postoji i main() koji služi kao demo/test:
+- ručno se postavi nekoliko nenultih vrijednosti u power spektru (simulacija pikova),
+- ispišu se nenulti binovi (k, f_k, power),
+- ispiše se dio filterbank težina (preview),
+- ispišu se dobijene Mel energije.
