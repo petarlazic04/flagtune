@@ -1,5 +1,6 @@
 import numpy as np
 from scipy.fftpack import dct
+import time
 
 # ===============================
 # CONFIG
@@ -8,7 +9,7 @@ FS = 16000
 FRAME_SIZE = 512
 N_MELS = 26
 N_MFCC = 13
-SEED = 42
+SEED = int(time.time())
 
 INPUT_PATH = "data/input.txt"
 OUTPUT_PATH = "data/out_py.txt"

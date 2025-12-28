@@ -15,27 +15,27 @@ namespace fs = std::filesystem;
 // Helpers
 // ===============================
 
-std::vector<double> read_vector(const fs::path& path)
+std::vector<float> read_vector(const fs::path& path)
 {
     std::ifstream f(path);
     if (!f.is_open())
         throw std::runtime_error("Cannot open input file");
 
-    std::vector<double> v;
-    double x;
+    std::vector<float> v;
+    float x;
     while (f >> x)
         v.push_back(x);
 
     return v;
 }
 
-void write_vector(const fs::path& path, const std::vector<double>& v)
+void write_vector(const fs::path& path, const std::vector<float>& v)
 {
     std::ofstream f(path);
     if (!f.is_open())
         throw std::runtime_error("Cannot open output file");
 
-    for (double x : v)
+    for (float x : v)
         f << x << "\n";
 }
 
@@ -60,15 +60,14 @@ int main(int argc, char** argv)
         // ===============================
         // READ INPUT
         // ===============================
-        std::vector<double> x = read_vector(input_path);
+        std::vector<float> x = read_vector(input_path);
 
         // ===============================
         // PIPELINE (ENABLE ONE)
         // ===============================
 
-        //Brate pisi sve sa double iz nekog razloga bolje prokine
 
-        // apply_hann_window(x);
+        //apply_hann_window(x);
         // x = fft_mag(x);
         // x = power_spectrum(x);
         // x = mel_filterbank(x);
