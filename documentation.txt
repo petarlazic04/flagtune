@@ -145,3 +145,83 @@ U mel.cpp postoji i main() koji služi kao demo/test:
 - ispišu se nenulti binovi (k, f_k, power),
 - ispiše se dio filterbank težina (preview),
 - ispišu se dobijene Mel energije.
+
+
+========================
+Log energy (Log-Mel kompresija)
+========================
+
+U ovom dijelu projekta implementirali smo “log” korak koji dolazi odmah nakon Mel filterbank-a.
+Ovaj korak uzima vektor Mel energija i radi logaritamsku kompresiju po elementu.
+
+1) Šta je ulaz i izlaz?
+
+- Ulaz: vektor Mel energija (izlaz iz mel.cpp)
+  mel[m], m = 0..n_mels-1
+  gdje je mel[m] = Σ_k filterbank[m][k] * power_spectrum[k]
+
+- Izlaz: log-Mel energije (log kompresovane mel energije)
+  logmel[m] = log(mel[m] + eps)
+
+Napomena:
+- Koristimo prirodni logaritam (ln), tj. std::log.
+- eps je mala pozitivna konstanta (default 1e-12) koja sprječava log(0).
+
+
+2) Zašto radimo log kompresiju?
+
+- Kompresija dinamičkog opsega:
+  Mel energije mogu imati veliki raspon (od skoro 0 do velikih vrijednosti), a log ih “stisne”
+  i daje stabilnije feature-e.
+
+- Perceptualni razlog:
+  Ljudska percepcija jačine zvuka je približno logaritamska, pa log-Mel bolje prati sluh.
+
+- Stabilnost za dalje korake (npr. DCT/MFCC):
+  Log pretvara multiplikativne promjene u aditivne, pa je dalje procesiranje često robusnije.
+
+
+3) Numeričke napomene (eps i clamp)
+
+- Teorijski, Mel energije su ≥ 0 (jer dolaze iz power spektra i nenegativnih težina).
+- U praksi, zbog floating-point šuma može se pojaviti jako mala negativna vrijednost.
+  U implementaciji se takve vrijednosti clamp-uju na 0 prije log-a.
+- eps mora biti > 0.
+
+
+4) “Mel izlaz je log ulaz” (povezivanje modula)
+
+- U praksi pipeline izgleda ovako:
+  power_spectrum  ->  mel_energies_from_power_spectrum(...)  ->  log_energy_inplace(...)
+
+- Ako već imsmo pre-built filterbank (real-time slučaj), preporučeni poziv je:
+  log_mel_energies_from_power_spectrum(power_spectrum, filterbank, eps)
+
+- Ako želimo sve u jednom (nije idealno za real-time jer pravi filterbank svaki put):
+  log_mel_energies(power_spectrum, sample_rate, n_fft, n_mels, fmin, fmax, eps)
+
+
+5) Implementacija (C++)
+
+Implementirane su sljedeće funkcije u log.hpp/log.cpp:
+
+- log_energy_inplace(std::vector<float>& mel_energies, float eps)
+  Radi log kompresiju direktno nad postojećim vektorom (bez dodatne alokacije).
+
+- log_energy(const std::vector<float>& mel_energies, float eps)
+  Out-of-place verzija (vraća novi vektor).
+
+- log_mel_energies_from_power_spectrum(power_spectrum, filterbank, eps)
+  Direktna veza između mel.cpp i log.cpp: mel izlaz → log ulaz.
+
+- log_mel_energies(power_spectrum, sample_rate, n_fft, n_mels, fmin, fmax, eps)
+  Convenience funkcija: build + apply + log.
+
+
+6) Demo/test u log.cpp
+
+U log.cpp postoji demo main() (komentarisan u bloku /* ... */) koji:
+- napravi “fake” power spektar sa nekoliko pikova,
+- izgradi Mel filterbank,
+- izračuna Mel energije,
+- izračuna log-Mel vrijednosti i ispiše ih.
