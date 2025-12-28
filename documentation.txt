@@ -1,5 +1,3 @@
-https://docs.google.com/document/d/1xk4UtF1GljxYSZRsTryzVXfqct888PlqlM0rFdzC7zs/edit?tab=t.0
-
 =======================
 Windowing
 =======================
@@ -225,3 +223,70 @@ U log.cpp postoji demo main() (komentarisan u bloku /* ... */) koji:
 - izgradi Mel filterbank,
 - izračuna Mel energije,
 - izračuna log-Mel vrijednosti i ispiše ih.
+
+
+========================
+DCT (MFCC koeficijenti)
+========================
+
+U ovom dijelu projekta implementirali smo DCT (Discrete Cosine Transform) koji se primjenjuje na log-Mel energije.
+Ovo je završni korak za dobijanje MFCC koeficijenata.
+
+1) Šta je ulaz i izlaz?
+
+- Ulaz: log-Mel energije (izlaz iz log.cpp)
+  logmel[n], n = 0..N_mels-1
+
+- Izlaz (DCT): vektor DCT koeficijenata iste dužine (N_mels)
+  c[k], k = 0..N_mels-1
+
+- Izlaz (MFCC): u praksi ne koristimo sve koeficijente, nego uzimamo prvih N_mfcc:
+  mfcc[i] = c[i], i = 0..N_mfcc-1
+
+
+2) Zašto koristimo DCT na log-Mel vrijednostima?
+
+- DCT radi “de-korelaciju” komponenti:
+  Log-Mel vektor ima susjedne kanale koji su često slični (korelirani). DCT prebacuje taj opis u kosinusnu bazu,
+  gdje je energija često koncentrisana u manjem broju koeficijenata.
+
+- Kompresija informacije:
+  Umjesto da čuvamo N_mels vrijednosti, dovoljno je zadržati prvih N_mfcc koeficijenata (npr. 12 ili 13),
+  koji opisuju glatki “oblik” spektralne omotnice.
+
+- Fizičko značenje (intuicija):
+  DCT koeficijenti opisuju oblik log-Mel spektra.
+  Niski indeksi (c0, c1, c2...) opisuju spore/glatke promjene kroz frekvenciju (timbre / forma spektra),
+  a visoki indeksi opisuju fine “nazubljene” detalje (koji su često manje stabilni).
+
+
+3) Korištena formula (DCT-II, ortho)
+
+Koristimo standardnu DCT-II transformaciju sa ortonormalnom normalizacijom ("ortho"):
+
+c[k] = alpha(k) * Σ_{n=0}^{N-1} logmel[n] * cos( (π / N) * (n + 0.5) * k )
+
+gdje je:
+- alpha(0) = sqrt(1/N)
+- alpha(k) = sqrt(2/N) za k > 0
+
+
+4) Implementacija (C++)
+
+Implementirane su sljedeće funkcije u dct.hpp/dct.cpp:
+
+- dct_ii_ortho(const std::vector<float>& x)
+  Računa kompletan DCT-II (ortho) nad ulaznim vektorom x (tipično: log-Mel).
+  Vraća vektor iste dužine kao ulaz.
+
+- dct_mfcc(const std::vector<float>& log_mel, int n_mfcc)
+  Convenience funkcija za MFCC:
+  1) izračuna dct_ii_ortho(log_mel)
+  2) vrati samo prvih n_mfcc koeficijenata.
+
+
+5) Demo/test u dct.cpp
+
+U dct.cpp postoji demo main() koji testira pipeline:
+power_spectrum -> Mel -> log-Mel -> DCT -> MFCC
+i ispisuje log-Mel vrijednosti i MFCC koeficijente.
