@@ -1,4 +1,4 @@
-#!/home/stankic/Desktop/Programiranje/flagtune/mfcc/test/venv/bin/python3
+#!/home/petar/Documents/FAKS/Projekti/FlagTune/flagtune/mfcc/test/venv/bin/python3
 # -*- coding: utf-8 -*-
 import re
 import sys
