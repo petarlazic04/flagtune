@@ -1,5 +1,43 @@
 https://docs.google.com/document/d/1xk4UtF1GljxYSZRsTryzVXfqct888PlqlM0rFdzC7zs/edit?tab=t.0
 
+=======================
+Windowing
+=======================
+
+Ovjde smo implementirali Hann prozorsku funkciju
+
+1) Otkud potreba za prozorskom funkcijom?
+
+- U digitalnoj obradi signala analizu radimo po okvirima.
+- Na primjer audio signal možemo izdjeliti na frejmove od po 20ms i 
+nad takvim frejmovima vršimo sve dalje transformacije i analizu.
+- Problem predstavljaju dijelovi gdje se frejmovi spajaju jer tu imamo
+diskontinuitet što u spektralnom domenu uvodi šum sa strane svake komponente.
+- Prozorske funkcije služe kako bi ovaj side-lobe otklonile i pružile stabilan
+spektar.
+
+2) Kako radi Hann prozorska funkcija?
+
+- Hann je prozorska kosinusna funkcija koja spušta rubove signala u spektralnom
+domenu ka nuli. 
+- Formula:
+  w(n) = 0.5 * (1 - cos(2 * π * n / N))
+
+* w(n) vrijednost funkcije u n-tom odbirku,
+* n trenutni odbirak
+* N ukupan broj odbiraka
+
+3) C++ Implementacija
+
+- Implementirane su sljedeće funkcije:
+  hann(int n, int N) i apply_hann_window(std::vector<float>& frame)
+- Hann računa vrijednost na nivou odbirka, i napisana je kao inline funkcija
+kako bi sugerisali kompajleru da direktno ubaci ovaj dio koda, jer je sama hann
+funkcija samo formula i nije nam potreban overhead koji bi standardni poziv 
+funkcije imao.
+- apply_hann_window radi na nivou frejma za sve odbirke
+
+
 ========================
 Mel filterbank (Mel frekvencijska transformacija)
 ========================
