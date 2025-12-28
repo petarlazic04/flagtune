@@ -76,217 +76,184 @@ brojem odbiraka kako bi dobili normalizovane vrijednosti.
 Mel filterbank (Mel frekvencijska transformacija)
 =====================================================
 
-U ovom dijelu projekta implementirali smo Mel filterbank koji se primjenjuje na FFT spektar.
+U ovom dijelu projekta implementirali smo Mel filterbank koji se primjenjuje na FFT POWER spektar.
 
-1) Šta je ulaz i šta je “spectrum bin”?
-- Nakon FFT dužine N (= n_fft), dobijamo diskretan spektar po frekvencijskim "binovima".
-- Bin je indeks k u FFT rezultatu. Za realan signal najčešće koristimo samo pozitivne frekvencije: 
-broj binova = n_fft/2 + 1.
-- Frekvencija centra bina: 
-f_k = k * sample_rate / n_fft
-- Razmak između binova (frekvencijska rezolucija): 
-Δf = sample_rate / n_fft
+1) Ulaz i izlaz
 
-U implementaciji ne računamo FFT, već pretpostavljamo da već imamo spektar u obliku:
-- power_spectrum[k] = |X[k]|^2  (POWER spektar)
-Napomena: to nije magnituda |X[k]|, nego kvadrat magnitude (energija po binu).
+- Ulaz je POWER spektar realnog signala, samo pozitivne frekvencije:
+  power_spectrum[k] = |X[k]|^2,  k = 0..(n_fft/2)
+  (znači broj binova je n_fft/2 + 1)
 
-2) Šta radi Mel filterbank (realna interpretacija)?
-Cilj Mel filterbank-a je da “sabije” linearni FFT spektar u manji broj kanala koji bolje odgovaraju ljudskoj percepciji frekvencije:
-- Na niskim frekvencijama imamo finiju rezoluciju (više “kanala” po Hz),
-- Na višim frekvencijama rezolucija je grublja.
+- Povezivanje bina i frekvencije (korisno za intuiciju):
+  f_k = k * sample_rate / n_fft
+  Δf = sample_rate / n_fft
 
-Rezultat je vektor Mel energija:
-mel[m], m = 0..n_mels-1
-Svaki mel[m] predstavlja energiju signala u jednom perceptualnom frekvencijskom opsegu (Mel band).
+- Izlaz je vektor Mel energija:
+  mel[m], m = 0..n_mels-1
 
-3) Mel skala (mapiranje Hz <-> Mel)
-Koristimo standardnu (HTK) Mel skalu:
-- mel = 2595 * log10(1 + f/700)
-- f = 700 * (10^(mel/2595) - 1)
+2) Šta Mel filterbank radi i zašto?
 
-4) Kako se grade filteri (trougaoni filterbank)
-Za n_mels filtera, prvo napravimo n_mels + 2 Mel tačke ravnomjerno raspoređene na Mel skali između fmin i fmax.
-Te tačke zatim:
-- pretvaramo iz Mel u Hz,
-- mapiramo na FFT binove (diskretna mreža):
-  bin = floor((n_fft + 1) * hz / sample_rate)
-Svaki Mel filter je trougao definisan sa 3 indeksa:
-- left  = bin_points[m]
-- center= bin_points[m+1]
-- right = bin_points[m+2]
-Težine rastu od left do center (0 -> 1) i padaju od center do right (1 -> 0).
+- FFT je na linearnoj Hz skali (svaki bin je isti razmak u Hz).
+- Ljudsko uho ima bolju rezoluciju na nižim frekvencijama nego na višim.
+- Mel filterbank “sabije” spektar u n_mels kanala tako da su kanali gušći na nižim frekvencijama, a rjeđi na višim.
 
-Opcionalno radimo normalizaciju:
-- normalize_by_sum = true
-- svaki filter se normalizuje tako da zbir njegovih težina bude 1
-Ovo stabilizuje skalu izlaznih Mel energija (da ne zavisi previše od broja binova koje filter pokriva).
+3) Mel skala (Hz <-> Mel)
 
-5) Kako se filterbank primjenjuje na spektar (dobijanje Mel energija)
-Mel energija se računa kao ponderisana suma (suma sa težinama) power spektra:
-mel[m] = Σ_k filterbank[m][k] * power_spectrum[k]
+- Koristimo standardnu (HTK) Mel skalu:
+  mel = 2595 * log10(1 + f/700)
+  f = 700 * (10^(mel/2595) - 1)
 
-To znači:
-- ako u nekom FFT binu imamo pik energije, on će doprinijeti jednom ili dva susjedna Mel kanala (u zavisnosti od toga gdje bin pada u trouglu).
+4) Kako gradimo filtere (trouglovi)
 
-6) Implementacija (C++)
-Implementirane su sljedeće funkcije:
-- build_mel_filterbank(...)
-  Pravi matricu težina dimenzija [n_mels][n_fft/2 + 1].
+- Napravimo n_mels + 2 tačke ravnomjerno na Mel skali između fmin i fmax.
+- Te tačke pretvorimo nazad u Hz i mapiramo na FFT bin indekse.
+- Svaki filter je trougao definisan sa (left, center, right) binom.
+- Težina ide 0 -> 1 (left do center) i 1 -> 0 (center do right).
+- Drugim riječima, filter je “najosjetljiviji” na frekvencije oko center bina.
+- Ako bin k padne između left i center, doprinos raste linearno, a između center i right opada linearno.
+- U kodu koristimo normalizaciju po sumi (normalize_by_sum=true) da skala Mel energija bude stabilnija.
+
+5) Kako računamo Mel energije
+
+- Za svaki mel kanal m radimo ponderisanu sumu:
+  mel[m] = Σ_k filterbank[m][k] * power_spectrum[k]
+
+6) C++ implementacija
+
+- build_mel_filterbank(sample_rate, n_fft, n_mels, fmin, fmax, normalize_by_sum)
+  vraća matricu težina dimenzija [n_mels][n_fft/2 + 1].
+
 - mel_energies_from_power_spectrum(power_spectrum, filterbank)
-  Primjenjuje filterbank na POWER spektar i vraća Mel energije.
-- mel_energies(...)
-  Convenience funkcija: build + apply u jednom pozivu.
+  primjenjuje već izgrađeni filterbank.
 
-U mel.cpp postoji i main() koji služi kao demo/test:
-- ručno se postavi nekoliko nenultih vrijednosti u power spektru (simulacija pikova),
-- ispišu se nenulti binovi (k, f_k, power),
-- ispiše se dio filterbank težina (preview),
-- ispišu se dobijene Mel energije.
+- mel_energies(power_spectrum, ...)
+  “convenience” poziv koji prvo napravi filterbank pa ga primijeni.
+
+- mel_energies_from_frame(frame, ...)
+  pomoćna funkcija koja radi: frame -> FFT -> power_spectrum_rfft -> Mel.
+
+Napomena (šta znači “convenience”): to su pomoćne funkcije koje spajaju više koraka u jedan poziv,
+da se lakše testira i da je kod kraći. Za real-time se obično koristi već izgrađen filterbank (bez rebuild-a svaki frejm).
+
+Napomena: u mel.cpp postoji komentarisani main() za jednostavan test (1kHz sinus).
+
+7) Šta očekivati na realnom frejmu (intuicija)
+
+- Ako je frejm skoro tišina, većina mel[m] će biti vrlo mala (blizu 0).
+- Ako je frejm “čist ton” (npr. 1kHz sinus), energija će se pojaviti u 1-3 susjedna mel kanala.
+- Ako je frejm govor ili muzika, energija će biti raspoređena na više kanala, ali i dalje neće biti ravna.
+
+8) Tipični parametri (za studentski projekat)
+
+- sample_rate: 16000 Hz (često za govor)
+- n_fft: 512 (oko 32ms na 16kHz) ili 400 (25ms)
+- n_mels: 26 ili 40
+- fmin: 0 Hz, fmax: sample_rate/2
 
 
 ========================
 Log energy (Log-Mel kompresija)
 ========================
 
-U ovom dijelu projekta implementirali smo “log” korak koji dolazi odmah nakon Mel filterbank-a.
-Ovaj korak uzima vektor Mel energija i radi logaritamsku kompresiju po elementu.
+Ovo je korak odmah nakon Mel filterbank-a.
+Uzima Mel energije i radi logaritamsku kompresiju po elementu.
 
-1) Šta je ulaz i izlaz?
+1) Ulaz i izlaz
 
-- Ulaz: vektor Mel energija (izlaz iz mel.cpp)
-  mel[m], m = 0..n_mels-1
-  gdje je mel[m] = Σ_k filterbank[m][k] * power_spectrum[k]
+- Ulaz: mel[m] (Mel energije), m = 0..n_mels-1
+- Izlaz: logmel[m] = ln(mel[m] + eps)
 
-- Izlaz: log-Mel energije (log kompresovane mel energije)
-  logmel[m] = log(mel[m] + eps)
+Koristimo prirodni log (std::log). eps (default 1e-12) je tu da izbjegnemo ln(0).
 
-Napomena:
-- Koristimo prirodni logaritam (ln), tj. std::log.
-- eps je mala pozitivna konstanta (default 1e-12) koja sprječava log(0).
+2) Zašto radimo log?
 
+- Mel energije imaju veliki raspon vrijednosti. Log to “stisne” i daje stabilnije feature-e.
+- Ljudsko uho približno logaritamski doživljava jačinu zvuka.
+- Još jedna praktična stvar: log pretvara multiplikativne promjene u aditivne, pa je dalje poređenje lakše.
 
-2) Zašto radimo log kompresiju?
+3) Numerika (bitno za implementaciju)
 
-- Kompresija dinamičkog opsega:
-  Mel energije mogu imati veliki raspon (od skoro 0 do velikih vrijednosti), a log ih “stisne”
-  i daje stabilnije feature-e.
-
-- Perceptualni razlog:
-  Ljudska percepcija jačine zvuka je približno logaritamska, pa log-Mel bolje prati sluh.
-
-- Stabilnost za dalje korake (npr. DCT/MFCC):
-  Log pretvara multiplikativne promjene u aditivne, pa je dalje procesiranje često robusnije.
-
-
-3) Numeričke napomene (eps i clamp)
-
-- Teorijski, Mel energije su ≥ 0 (jer dolaze iz power spektra i nenegativnih težina).
-- U praksi, zbog floating-point šuma može se pojaviti jako mala negativna vrijednost.
-  U implementaciji se takve vrijednosti clamp-uju na 0 prije log-a.
+- Mel energije su teorijski >= 0, ali zbog floating-point greške može doći mala negativna vrijednost.
+  U kodu se to clamp-uje na 0 prije log-a.
 - eps mora biti > 0.
 
+4) C++ implementacija
 
-4) “Mel izlaz je log ulaz” (povezivanje modula)
+- log_energy_inplace(std::vector<float>& mel, float eps)
+  radi log direktno nad postojećim vektorom (brže, bez dodatne alokacije).
 
-- U praksi pipeline izgleda ovako:
-  power_spectrum  ->  mel_energies_from_power_spectrum(...)  ->  log_energy_inplace(...)
+- log_energy(const std::vector<float>& mel, float eps)
+  vraća novi vektor.
 
-- Ako već imsmo pre-built filterbank (real-time slučaj), preporučeni poziv je:
-  log_mel_energies_from_power_spectrum(power_spectrum, filterbank, eps)
+- log_mel_energies_from_power_spectrum(power, filterbank, eps)
+  “spaja” mel + log kad već imaš filterbank.
 
-- Ako želimo sve u jednom (nije idealno za real-time jer pravi filterbank svaki put):
-  log_mel_energies(power_spectrum, sample_rate, n_fft, n_mels, fmin, fmax, eps)
+- log_mel_energies(power, sample_rate, n_fft, n_mels, fmin, fmax, eps)
+  sve u jednom (pravi filterbank svaki put, nije idealno za real-time).
 
+Napomena: u log.cpp postoji komentarisani main() sa “fake” power spektrum pikovima.
 
-5) Implementacija (C++)
+5) Šta očekivati u log-Mel izlazu
 
-Implementirane su sljedeće funkcije u log.hpp/log.cpp:
+- Ako je mel[m] = 0, onda je logmel[m] ≈ ln(eps). Za eps=1e-12 to je oko -27.63.
+- Aktivni mel kanali (gdje ima energije) biće mnogo veći (npr. od -5 do +5, zavisi od signala i normalizacije).
+- Log korak se skoro uvijek radi prije DCT jer daje stabilnije koeficijente.
 
-- log_energy_inplace(std::vector<float>& mel_energies, float eps)
-  Radi log kompresiju direktno nad postojećim vektorom (bez dodatne alokacije).
-
-- log_energy(const std::vector<float>& mel_energies, float eps)
-  Out-of-place verzija (vraća novi vektor).
-
-- log_mel_energies_from_power_spectrum(power_spectrum, filterbank, eps)
-  Direktna veza između mel.cpp i log.cpp: mel izlaz → log ulaz.
-
-- log_mel_energies(power_spectrum, sample_rate, n_fft, n_mels, fmin, fmax, eps)
-  Convenience funkcija: build + apply + log.
-
-
-6) Demo/test u log.cpp
-
-U log.cpp postoji demo main() (komentarisan u bloku /* ... */) koji:
-- napravi “fake” power spektar sa nekoliko pikova,
-- izgradi Mel filterbank,
-- izračuna Mel energije,
-- izračuna log-Mel vrijednosti i ispiše ih.
+Mala napomena: u ovom projektu koristimo prirodni log (ln). U nekim bibliotekama se može naći i log10,
+ali ideja (kompresija) je ista.
 
 
 ========================
 DCT (MFCC koeficijenti)
 ========================
 
-U ovom dijelu projekta implementirali smo DCT (Discrete Cosine Transform) koji se primjenjuje na log-Mel energije.
-Ovo je završni korak za dobijanje MFCC koeficijenata.
+Ovo je zadnji korak u MFCC dijelu: DCT se primjenjuje na log-Mel vrijednosti.
 
-1) Šta je ulaz i izlaz?
+1) Ulaz i izlaz
 
-- Ulaz: log-Mel energije (izlaz iz log.cpp)
-  logmel[n], n = 0..N_mels-1
+- Ulaz: logmel[m], m = 0..(n_mels-1)
+- Izlaz: DCT koeficijenti c[k], k = 0..(n_mels-1)
+- MFCC: u praksi uzimamo samo prvih n_mfcc koeficijenata (npr. 13):
+  mfcc[i] = c[i]
 
-- Izlaz (DCT): vektor DCT koeficijenata iste dužine (N_mels)
-  c[k], k = 0..N_mels-1
+2) Šta dobijamo DCT-om (intuicija)
 
-- Izlaz (MFCC): u praksi ne koristimo sve koeficijente, nego uzimamo prvih N_mfcc:
-  mfcc[i] = c[i], i = 0..N_mfcc-1
+- DCT “prepiše” log-mel vektor u kosinusne komponente.
+- Susjedni mel kanali su često slični, pa se informacija sabije u prvih nekoliko koeficijenata.
+- `c0` je (skalirani) prosjek log-mel vrijednosti (povezano sa ukupnom energijom u log domenu).
+- `c1, c2, ...` opisuju oblik spektralne omotnice (timbre), dok visoki koeficijenti hvataju fine detalje.
 
-
-2) Zašto koristimo DCT na log-Mel vrijednostima?
-
-- DCT radi “de-korelaciju” komponenti:
-  Log-Mel vektor ima susjedne kanale koji su često slični (korelirani). DCT prebacuje taj opis u kosinusnu bazu,
-  gdje je energija često koncentrisana u manjem broju koeficijenata.
-
-- Kompresija informacije:
-  Umjesto da čuvamo N_mels vrijednosti, dovoljno je zadržati prvih N_mfcc koeficijenata (npr. 12 ili 13),
-  koji opisuju glatki “oblik” spektralne omotnice.
-
-- Fizičko značenje (intuicija):
-  DCT koeficijenti opisuju oblik log-Mel spektra.
-  Niski indeksi (c0, c1, c2...) opisuju spore/glatke promjene kroz frekvenciju (timbre / forma spektra),
-  a visoki indeksi opisuju fine “nazubljene” detalje (koji su često manje stabilni).
-
-
-3) Korištena formula (DCT-II, ortho)
-
-Koristimo standardnu DCT-II transformaciju sa ortonormalnom normalizacijom ("ortho"):
+3) Formula (DCT-II, ortho)
 
 c[k] = alpha(k) * Σ_{n=0}^{N-1} logmel[n] * cos( (π / N) * (n + 0.5) * k )
 
-gdje je:
-- alpha(0) = sqrt(1/N)
-- alpha(k) = sqrt(2/N) za k > 0
+alpha(0) = sqrt(1/N)
+alpha(k) = sqrt(2/N) za k > 0
 
+Poseban slučaj za k=0 (bitno za tumačenje c0):
+c[0] = sqrt(1/N) * Σ_{n=0}^{N-1} logmel[n]
+što znači da je c0 (skalirani) prosjek log-mel vrijednosti.
 
-4) Implementacija (C++)
-
-Implementirane su sljedeće funkcije u dct.hpp/dct.cpp:
+4) C++ implementacija
 
 - dct_ii_ortho(const std::vector<float>& x)
-  Računa kompletan DCT-II (ortho) nad ulaznim vektorom x (tipično: log-Mel).
-  Vraća vektor iste dužine kao ulaz.
+  računa DCT-II (ortho) nad vektorom.
 
 - dct_mfcc(const std::vector<float>& log_mel, int n_mfcc)
-  Convenience funkcija za MFCC:
-  1) izračuna dct_ii_ortho(log_mel)
-  2) vrati samo prvih n_mfcc koeficijenata.
+  vrati samo prvih n_mfcc koeficijenata.
 
+Napomena: u dct.cpp postoji komentarisani main() koji testira lanac (power -> mel -> log -> dct).
 
-5) Demo/test u dct.cpp
+5) Kako tumačiti MFCC koeficijente (kratko)
 
-U dct.cpp postoji demo main() koji testira pipeline:
-power_spectrum -> Mel -> log-Mel -> DCT -> MFCC
-i ispisuje log-Mel vrijednosti i MFCC koeficijente.
+- c[0] je (skalirani) prosjek log-mel vrijednosti, pa je povezan sa ukupnim nivoom energije u log domenu.
+- c[1], c[2], c[3] opisuju “glatki oblik” spektralne omotnice (timbre) i obično nose najviše korisne informacije.
+- Viši koeficijenti hvataju fine detalje koji su često osjetljiviji na šum.
+
+6) Zašto uzimamo samo prvih 12/13 koeficijenata?
+
+- U praksi je informacija uglavnom koncentrisana u nižim indeksima.
+- Manji broj koeficijenata = manji ulaz za model i stabilniji feature-i.
+
+Kratak pregled pipeline-a (od frejma do MFCC):
+frame -> Hann -> FFT -> power_spectrum_rfft -> Mel -> log -> DCT -> MFCC
