@@ -1,6 +1,6 @@
-#include "dct.hpp"
-#include "log.hpp"
-#include "mel.hpp"
+#include "../include/dct.hpp"
+#include "../include/log.hpp"
+#include "../include/mel.hpp"
 #include <iomanip>
 #include <iostream>
 #include <vector>

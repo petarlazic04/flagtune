@@ -1,5 +1,5 @@
-#include "mel.hpp"
-#include "fft.hpp"
+#include "../include/mel.hpp"
+#include "../include/fft.hpp"
 #include <algorithm>
 #include <cmath>
 #include <stdexcept>
