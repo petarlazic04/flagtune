@@ -1,5 +1,5 @@
-#include "log.hpp"
-#include "mel.hpp"
+#include "../include/log.hpp"
+#include "../include/mel.hpp"
 #include <algorithm>
 #include <cmath>
 #include <stdexcept>
