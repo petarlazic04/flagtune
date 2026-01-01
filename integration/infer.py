@@ -6,34 +6,37 @@ import librosa
 # ===============================
 FS = 16000
 FRAME_SIZE = 512
-HOP_LENGTH = 256
 N_MELS = 26
 N_MFCC = 13
-DURATION = 1.0  # sekunda
 
 # ===============================
 # GENERISI SIGNAL
 # ===============================
-t = np.arange(0, int(FS * DURATION)) / FS
-x = 0.7 * np.sin(2 * np.pi * 440 * t) + 0.3 * np.sin(2 * np.pi * 880 * t)
+t = np.arange(FRAME_SIZE) / FS
+x = 0.7 * np.sin(2 * np.pi * 1000 * t)
+
+print(x)
 
 # ===============================
-# MFCC
+# MFCC – SAMO JEDAN FREJM
 # ===============================
 mfcc = librosa.feature.mfcc(
     y=x,
     sr=FS,
     n_mfcc=N_MFCC,
     n_fft=FRAME_SIZE,
-    hop_length=HOP_LENGTH,
+    hop_length=FRAME_SIZE,   # nema hopovanja
     n_mels=N_MELS,
     window="hann",
     center=False
-).T   # (frames, 13)
+)
+
+# mfcc shape: (13, 1)
+mfcc = mfcc[:, 0]
 
 # ===============================
 # ISPIS
 # ===============================
-print("Prvi frejm – 13 MFCC koeficijenata:")
-for i, v in enumerate(mfcc[0]):
+print("MFCC (1 frejm, 13 koeficijenata):")
+for i, v in enumerate(mfcc):
     print(f"c{i:02d} = {v:.6f}")

@@ -33,6 +33,7 @@ void fft(std::vector<cf> &a) {
     }
 }
 
+//Radi za kompleksne vrijednosti
 std::vector<float> power_spectrum(const std::vector<cf> &X) {
     int N = X.size();
     std::vector<float> P(N);
@@ -41,6 +42,7 @@ std::vector<float> power_spectrum(const std::vector<cf> &X) {
     return P;
 }
 
+//Radi za realne vrijednosti spektra sto je optimizovanije za nas pristup jer nam kompleksna polovina spektra ne radi nista
 std::vector<float> power_spectrum_rfft(const std::vector<cf> &X) {
     const int N = static_cast<int>(X.size());
     if (N <= 0) return {};
